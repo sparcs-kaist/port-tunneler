@@ -1,6 +1,5 @@
 import click
-import logging
-import pathlib
+from pathlib import Path
 
 import ptunnel
 import ptunnel.client
@@ -18,7 +17,7 @@ def main():
     pass
 
 @main.command("server")
-@click.option("-c", "--config", default="config.json", help="Path to the config file.")
+@click.option("-c", "--config", default="config.json", help="Path to the config file.", type=Path)
 def crontab(config):
     """
     Server run.

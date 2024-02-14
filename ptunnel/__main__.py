@@ -3,6 +3,8 @@ import logging
 import pathlib
 
 import ptunnel
+import ptunnel.client
+import ptunnel.server
 
 __version__ = "1.0.0-pre1"
 ptunnel.__version__ = __version__
@@ -17,19 +19,23 @@ def main():
 
 @main.command("server")
 @click.option("-c", "--config", default="config.json", help="Path to the config file.")
-def crontab(user, config):
+def crontab(config):
     """
     Server run.
     """
-    config = ptunnel.config.load(config)
-    crontab = ptunnel.crontab.generate(config, user)
-    print(crontab)
+    config = ptunnel.server.load_config(config)
+    ptunnel.server.run(config)
+
+@main.command("config")
+def config():
+    """
+    Config file management.
+    """
+    ptunnel.server.save_config()
 
 @main.command("client")
-@click.argument("config", default="/etc/mirror/daemon.json")
 def daemon(config):
     """
     Client run.
     """
-    config = ptunnel.config.load(config)
-    ptunnel.client.daemon(config)
+    ptunnel.client.run(config)

@@ -1,3 +1,6 @@
+from pathlib import Path
+import json
+
 import ptunnel
 
 DEFAULT_CONFIG = {
@@ -31,3 +34,13 @@ class Config:
         self.password = config["password"]
         self.ssl = config["ssl"]
         self.keepalive = config["keepalive"]
+
+def load_config(configPath: Path):
+    if not configPath.exists():
+        raise FileNotFoundError(f"Config file not found: {configPath}")
+    ptunnel.config = Config(json.loads(configPath.read_text()))
+    return
+
+def save_config():
+    Path("config.json").write_text(json.dumps(ptunnel.config.__dict__, indent=4))
+    return

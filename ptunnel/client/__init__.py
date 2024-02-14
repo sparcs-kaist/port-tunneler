@@ -141,7 +141,7 @@ def keepalive():
         _request("keepalive", {})
         time.sleep(5)
 
-def entry():
+def run():
     global sessid
     global team_id
 

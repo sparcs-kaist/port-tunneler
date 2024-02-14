@@ -86,7 +86,7 @@ def forward(args: list):
         "GatewayPorts=yes",
         "-N",
         "-R",
-        f"0.0.0.0:{remoteport}:localhost:{port}",
+        f"172.31.8.120:{remoteport}:localhost:{port}",
         f"{SRV_URL}",
         f"-l",
         f"A{team_id}",

@@ -23,7 +23,7 @@ def crontab(config):
     Server run.
     """
     config = ptunnel.server.load_config(config)
-    ptunnel.server.run(config)
+    ptunnel.server.run()
 
 @main.command("config")
 def config():
@@ -33,8 +33,8 @@ def config():
     ptunnel.server.save_config()
 
 @main.command("client")
-def daemon(config):
+def client():
     """
     Client run.
     """
-    ptunnel.client.run(config)
+    ptunnel.client.run()

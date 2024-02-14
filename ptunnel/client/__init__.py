@@ -82,6 +82,8 @@ def forward(args: list):
         "ssh",
         "-o",
         "StrictHostKeyChecking=no",
+        "-o",
+        "GatewayPorts=yes",
         "-N",
         "-R",
         f"0.0.0.0:{remoteport}:localhost:{port}",

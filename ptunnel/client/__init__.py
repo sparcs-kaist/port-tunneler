@@ -44,8 +44,8 @@ def _setup():
         logger.error("Not logged in.")
         return False
     
-    sshPath = Path(f"~/.ssh/")
-    sshidPath = Path(f"~/.ssh/id_rsa")
+    sshPath = Path(f"/home/elicer/.ssh/")
+    sshidPath = sshPath / "id_rsa"
 
     if not sshPath.exists():
         sshPath.mkdir(exist_ok=True)

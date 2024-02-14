@@ -140,6 +140,21 @@ def release():
 
     return {"status": "ok"}, 200
 
+@app.route("/close", methods=["POST"])
+def close():
+    data = request.json
+    if "session_id" not in data or "port" not in data:
+        return {"error": "Invalid request."}, 400
+    if data["session_id"] not in session:
+        return {"error": "Unauthorized."}, 401
+    if data["port"] not in session[data["session_id"]]["ports"]:
+        return {"error": "Port not found."}, 404
+    
+    session[data["session_id"]]["ports"].remove(data["port"])
+    ptunnel.logger.info(f"Port {data['port']} is released.")
+
+    return {"status": "ok"}, 200
+
 @app.route("/closeall", methods=["POST"])
 def closeall():
     data = request.json
@@ -164,6 +179,7 @@ def make_key():
 
     private_key, public_key = new_key()
     add_key(data["session_id"], public_key.decode())
+    ptunnel.logger.info(f"Key is made for {session[data['session_id']]['id']}.")
 
     return {"private_key": private_key.decode(), "public_key": public_key.decode()}, 200
 
@@ -175,7 +191,11 @@ def logout():
     if data["session_id"] not in session:
         return {"error": "Unauthorized."}, 401
     
+    for port in session[data["session_id"]]["ports"]:
+        ptunnel.logger.info(f"Port {port} is released. (logout {session[data['session_id']]['id']})")
+    ptunnel.logger.info(f"Session {session[data['session_id']]['id']} logged out.")
     del session[data["session_id"]]
+
 
     return {"status": "ok"}, 200
 

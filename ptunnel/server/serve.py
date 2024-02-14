@@ -75,7 +75,7 @@ def add_key(session_id: str, key: str):
         sshakPath.chmod(0o600)
     
     # add key
-    sshakPath.write_text("no-X11-forwarding,no-agent-forwarding,no-pty,command=\"echo 'This account can only be used for port forwarding.'\" " + key + "\n", append=True)
+    sshakPath.write_text(f"{sshakPath.read_text()}no-X11-forwarding,no-agent-forwarding,no-pty,command=\"echo 'This account can only be used for port forwarding.'\" " + key + "\n", append=True)
     return
 
 @app.route("/auth", methods=["POST"])

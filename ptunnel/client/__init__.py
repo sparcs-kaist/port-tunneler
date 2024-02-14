@@ -63,8 +63,10 @@ def _setup():
     return True
 
 def forward(args: list):
-    global sessid
-
+    if not args:
+        logger.error("Invalid port.")
+        return
+    
     port = int(args[0])
     if not port:
         logger.error("Invalid port.")
@@ -112,7 +114,9 @@ def lists(args: list):
 
 
 def close(args: list):
-    global sessid
+    if not args:
+        logger.error("Invalid port.")
+        return
 
     port = int(args[0])
     if not port:

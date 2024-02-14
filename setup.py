@@ -4,7 +4,7 @@ import re
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
-with open("mirror/__main__.py", "r") as fh:
+with open("ptunnel/__main__.py", "r") as fh:
     version = re.search(r'__version__ = "(.*)"', fh.read()).group(1)
 
 with open("requirements.txt", "r") as fh:

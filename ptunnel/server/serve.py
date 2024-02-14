@@ -33,7 +33,6 @@ def looper():
         loop_checker_port()
         loop_checker_session()
         time.sleep(12)
-    pass
 
 def loop_checker_port():
     for session_id in session:
@@ -124,7 +123,6 @@ def forward():
     
     ptunnel.logger.info(f"Port {port} is now used for {session[data['session_id']]}.")
 
-    threading.Thread(target=loop_checker, args=(port,)).start()
     return {"status": "ok", "port": port}, 200
 
 @app.route("/release", methods=["POST"])
@@ -182,6 +180,9 @@ def logout():
     return {"status": "ok"}, 200
 
 def run():
+    worker = threading.Thread(target=looper, daemon=True)
+    worker.start()
+
     ssl_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
     ssl_context.load_cert_chain(ptunnel.config.ssl["cert"], ptunnel.config.ssl["key"])
     app.run(host="0.0.0.0", port=443, ssl_context=ssl_context)

@@ -24,7 +24,7 @@ def _request(url, json):
     try:
         json.update({"session_id": sessid})
         response = requests.post(f"https://{SRV_URL}/{url}", json=json, timeout=timeout)
-        if response.status_code != 401:
+        if response.status_code == 401:
             for port in sshworkers:
                 sshworkers[port]["worker"].terminate()
             logger.error(f"Error: Unauthorized.")

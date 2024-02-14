@@ -51,7 +51,7 @@ def _setup():
         sshPath.mkdir(exist_ok=True)
         sshPath.chmod(0o700)
     if not sshidPath.exists():
-        rtn = _request("new_key", {})
+        rtn = _request("make_key", {})
         if not rtn:
             return False
         sshidPath.write_text(rtn["private_key"])

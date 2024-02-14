@@ -10,8 +10,6 @@ from flask import Flask, request
 from flask_cors import CORS
 
 from Crypto.PublicKey import RSA
-from cryptography.hazmat.primitives import serialization as crypto_serialization
-
 
 import ptunnel
 

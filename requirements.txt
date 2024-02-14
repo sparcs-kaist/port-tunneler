@@ -3,3 +3,4 @@ pycryptodome
 click
 flask
 flask_cors
+requests

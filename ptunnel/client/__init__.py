@@ -129,7 +129,7 @@ def close(args: list):
     logger.info(f"Port {port} is closed.")
     return
 
-def help():
+def help(args: list):
     logger.info("Available commands:")
     logger.info("  forward <port>: Open a port.")
     logger.info("  close <port>: Close a port.")

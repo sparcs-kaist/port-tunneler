@@ -137,7 +137,7 @@ def domainmap(args: list):
         return
     
     domain = args[0]
-    port = args[1]
+    port = int(args[1])
     if "." in domain:
         logger.error("Invalid domain.")
         return

@@ -316,7 +316,11 @@ def run():
     if not cert.exists():
         ptunnel.logger.error(f"SSL certificate not found: {cert}")
         exit(1)
-        
+    
+    if nginxconfPath.exists():
+        os.system(f"rm -rf {nginxconfPath}")
+    nginxconfPath.mkdir(exist_ok=True)
+
     worker = threading.Thread(target=looper, daemon=True)
     worker.start()
     app.run(host="0.0.0.0", port=5000)

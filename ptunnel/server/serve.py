@@ -154,12 +154,17 @@ def keepalive():
         return {"error": "Invalid request."}, 400
     if data["session_id"] not in session:
         return {"error": "Unauthorized."}, 401
-    
+
+    rtn = {"status": "ok"}
+
     session[data["session_id"]]["updated"] = time.time()
     if data["session_id"] in kicklist:
         ports = kicklist.pop(data["session_id"])
+        if "kick" not in rtn:
+            rtn["kick"] = []
+        rtn["kick"].append(ports)
 
-    return {"status": "ok", "kick": ports}, 200
+    return rtn, 200
 
 @app.route("/forward", methods=["POST"])
 def forward():

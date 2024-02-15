@@ -14,7 +14,13 @@ timeout = 5
 logger = ptunnel.logger
 sshworkers = {}
 
-def _request(url, json):
+def _kill_port(port: int):
+    if port in sshworkers:
+        sshworkers[port]["worker"].terminate()
+        del sshworkers[port]
+    return
+
+def _request(url, json, keepalive=False):
     global sessid
 
     if not sessid:
@@ -28,11 +34,18 @@ def _request(url, json):
             for port in sshworkers:
                 sshworkers[port]["worker"].terminate()
             logger.error(f"Error: Unauthorized.")
+            if keepalive: raise Exception("Unauthorized.")
             exit(2)
         if response.status_code != 200:
             logger.error(f"Error: {response.json()['error']}")
+            if keepalive: raise Exception(response.json())
             return False
-        return response.json()
+        data = response.json()
+        if keepalive and "kick" in data:
+            _kill_port(data["kick"])
+            logger.info(f"Port {data['kick']} is closed by server.")
+            return
+        return data
     except Exception as e:
         logger.error(f"Error: {e}")
         logger.error("Please contact admin.")
@@ -110,10 +123,36 @@ def lists(args: list):
     logger.info("Open ports:")
     for port in sshworkers:
         logger.info(f"  {SRV_URL}:{sshworkers[port]['remoteport']} -> localhost:{port}")
+        if "domain" in sshworkers[port]:
+            logger.info(f"  https://{sshworkers[port]['domain']}/ -> localhost:{port}")
     logger.info("End of list.")
     return
 
+def domainmap(args: list):
+    if not args:
+        logger.error("Invalid domain.")
+        return
+    if len(args) < 2:
+        logger.error("Invalid domain.")
+        return
+    
+    domain = args[0]
+    if "." in domain:
+        logger.error("Invalid domain.")
+        return
+    
+    if "domain" in sshworkers[args[1]]:
+        logger.error(f"Domain {sshworkers[args[1]]['domain']} is already mapped.")
+        return
+    
+    rtn = _request("domainmap", {"domain": domain, "port": sshworkers[args[1]]["remoteport"]})
+    if not rtn:
+        return
+    
+    sshworkers[args[1]]["domain"] = rtn["domain"]
 
+    logger.info(f"Domain https://{rtn["domain"]}/ is now mapped to port localhost:{args[1]}.")
+    return
 
 def close(args: list):
     if not args:
@@ -144,7 +183,12 @@ def help(args: list):
 
 def keepalive():
     while True:
-        _request("keepalive", {})
+        try:
+            _request("keepalive", {})
+        except:
+            logger.error("Closing all connections.")
+            for port in sshworkers:
+                sshworkers[port]["worker"].terminate()
         time.sleep(5)
 
 def run():

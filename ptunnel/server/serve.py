@@ -17,6 +17,41 @@ app = Flask(__name__)
 CORS(app)
 
 session = {}
+domainmapper: dict[int, str] = {}
+kicklist: dict[str, list[int]] = {}
+
+nginxconfPath = Path("/etc/nginx/ptunnel/")
+NGINXCONF = """
+server {
+    server_name {srvdomain};
+    
+    include /etc/nginx/default.d/*.conf;
+
+    location / {
+        proxy_pass http://localhost:{port}/;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "Upgrade";
+        proxy_set_header Host $host;
+    }
+
+    listen 443 ssl;
+    ssl_certificate /etc/letsencrypt/live/{tunneldns}/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/{tunneldns}/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem; 
+}
+server {
+    if ($host = {srvdomain}) {
+        return 301 https://$host$request_uri;
+    } # managed by Certbot
+
+    server_name {srvdomain}
+
+    listen 80;
+    return 404; # managed by Certbot
+}
+"""
 
 def checker(port):
     # check that local port is not in use
@@ -66,7 +101,7 @@ def add_key(session_id: str, key: str):
     sshPath = Path(f"/home/A{user}/.ssh/")
     sshakPath = Path(f"/home/A{user}/.ssh/authorized_keys")
     if not os.path.exists(f"/home/{user}/.ssh"):
-        os.system(f"useradd -m A{user} -s /sbin/nologin")
+        os.system(f"useradd -m A{user} -s /usr/sbin/nologin")
         sshPath.mkdir(exist_ok=True)
         sshakPath.touch(exist_ok=True)
         os.system(f"chown A{user}:A{user} /home/A{user}/.ssh")
@@ -77,6 +112,19 @@ def add_key(session_id: str, key: str):
     # add key
     sshakPath.write_text(f"{sshakPath.read_text()}no-X11-forwarding,no-agent-forwarding,no-pty,command=\"echo 'This account can only be used for port forwarding.'\" " + key + "\n")
     return
+
+def release_port(port: int, session_id: str, kick=False):
+    if port in domainmapper:
+        domainPath = nginxconfPath / domainmapper[port]
+        domainPath.unlink(missing_ok=True)
+        domainmapper.pop(port)
+    session[session_id]["ports"].remove(port)
+    if kick: 
+        if session_id not in kicklist:
+            kicklist[session_id] = []
+        kicklist[session_id].append(port)
+    ptunnel.logger.info(f"Port {port} is released.")
+    
 
 @app.route("/auth", methods=["POST"])
 def auth():
@@ -105,8 +153,10 @@ def keepalive():
         return {"error": "Unauthorized."}, 401
     
     session[data["session_id"]]["updated"] = time.time()
+    if data["session_id"] in kicklist:
+        ports = kicklist.pop(data["session_id"])
 
-    return {"status": "ok"}, 200
+    return {"status": "ok", "kick": ports}, 200
 
 @app.route("/forward", methods=["POST"])
 def forward():
@@ -118,6 +168,7 @@ def forward():
     
     while True:
         port = random.randint(ptunnel.config.range["start"], ptunnel.config.range["end"])
+        session[data["session_id"]]["ports"].append(port)
         if checker(port):
             break
     
@@ -135,8 +186,7 @@ def release():
     if data["port"] not in session[data["session_id"]]["ports"]:
         return {"error": "Port not found."}, 404
     
-    session[data["session_id"]]["ports"].remove(data["port"])
-    ptunnel.logger.info(f"Port {data['port']} is released.")
+    release_port(data["port"], data["session_id"])
 
     return {"status": "ok"}, 200
 
@@ -149,6 +199,11 @@ def close():
         return {"error": "Unauthorized."}, 401
     if data["port"] not in session[data["session_id"]]["ports"]:
         return {"error": "Port not found."}, 404
+
+    if data["port"] in domainmapper:
+        domainPath = nginxconfPath / domainmapper[data["port"]]
+        domainPath.unlink(missing_ok=True)
+        domainmapper.pop(data["port"])
     
     session[data["session_id"]]["ports"].remove(data["port"])
     ptunnel.logger.info(f"Port {data['port']} is released.")
@@ -157,6 +212,7 @@ def close():
 
 @app.route("/closeall", methods=["POST"])
 def closeall():
+    global nginxconfPath
     data = request.json
     if "session_id" not in data:
         return {"error": "Invalid request."}, 400
@@ -164,6 +220,10 @@ def closeall():
         return {"error": "Unauthorized."}, 401
     
     for port in session[data["session_id"]]["ports"]:
+        if port in domainmapper:
+            domainPath = nginxconfPath / domainmapper[port]
+            domainPath.unlink(missing_ok=True)
+            domainmapper.pop(port)
         session[data["session_id"]]["ports"].remove(port)
         ptunnel.logger.info(f"Port {port} is released.")
 
@@ -199,10 +259,67 @@ def logout():
 
     return {"status": "ok"}, 200
 
+@app.route("/domainmap", methods=["POST"])
+def domainmap():
+    data = request.json
+    if "session_id" not in data or "port" not in data or "domain" not in data:
+        return {"error": "Invalid request."}, 400
+    if data["session_id"] not in session:
+        return {"error": "Unauthorized."}, 401
+    if data["port"] not in session[data["session_id"]]["ports"]:
+        return {"error": "Port not found."}, 404
+    
+    srvdomain = f"{data['domain']}.{ptunnel.config.tunneldns}"
+    srvdomainconfPath = nginxconfPath / srvdomain
+
+    if srvdomainconfPath.exists():
+        return {"error": "Domain already exists."}, 400
+    
+    nginxconf = NGINXCONF.format(srvdomain=srvdomain, port=data["port"], tunneldns=ptunnel.config.tunneldns)
+    srvdomainconfPath.write_text(nginxconf)
+    nginxtry = os.system(f"nginx -t")
+    if nginxtry != 0:
+        srvdomainconfPath.unlink()
+        ptunnel.logger.error(nginxconf)
+        return {"error": "Error, contact admin."}, 400
+    
+    os.system("systemctl reload nginx")
+    domainmapper.update({data["port"]: srvdomain})
+    
+    ptunnel.logger.info(f"Domain {srvdomain} with https is mapped to port {data['port']}.")
+    
+    return {"status": "ok"}, 200
+
+def auth_admin(req):
+    if "pass" not in req.args:
+        return {"error": "Invalid request."}, 400
+    if req.args["pass"] != ptunnel.config.adminpassword:
+        return {"error": "Unauthorized."}, 401
+    return {}, 200
+
+@app.route("/manage/kick", methods=["GET"])
+def kick():
+    rtn, statuscode = auth_admin(request)
+    if statuscode != 200: return rtn, statuscode
+
+    if "session_id" not in request.args:
+        return {"error": "Invalid request."}, 400
+    if request.args["session_id"] not in session:
+        return {"error": "Session not found."}, 404
+    
+    for port in session[request.args["session_id"]]["ports"]:
+        release_port(port, request.args["session_id"], kick=True)
+
+    return {"status": "ok"}, 200
+
+@app.route("/manage/list", methods=["GET"])
+def list():
+    rtn, statuscode = auth_admin(request)
+    if statuscode != 200: return rtn, statuscode
+
+    return {"session": session, "domainmap": domainmapper}, 200
+
 def run():
     worker = threading.Thread(target=looper, daemon=True)
     worker.start()
-
-    ssl_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
-    ssl_context.load_cert_chain(ptunnel.config.ssl["cert"], ptunnel.config.ssl["key"])
-    app.run(host="0.0.0.0", port=443, ssl_context=ssl_context)
+    app.run(host="0.0.0.0", port=5000)

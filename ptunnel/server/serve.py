@@ -287,7 +287,7 @@ def domainmap():
     
     ptunnel.logger.info(f"Domain {srvdomain} with https is mapped to port {data['port']}.")
     
-    return {"status": "ok"}, 200
+    return {"status": "ok", "domain": srvdomain}, 200
 
 def auth_admin(req):
     if "pass" not in req.args:

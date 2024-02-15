@@ -142,7 +142,7 @@ def domainmap(args: list):
         logger.error("Invalid domain.")
         return
 
-    if not port in sshworkers:
+    if port not in sshworkers:
         logger.error(f"Port {port} is not open.")
         return
     

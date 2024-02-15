@@ -4,17 +4,13 @@ import json
 import ptunnel
 
 DEFAULT_CONFIG = {
-    "tunneldns": "hackaton.sparcs.net",
+    "tunneldns": "subdomain.example.com",
     "range": {
         "start": 30000,
         "end": 50000,
     },
     "password": "",
     "adminpassword": "",
-    "ssl": {
-        "cert": "cert.pem",
-        "key": "key.pem",
-    },
     "keepalive": 12,
 }
 
@@ -23,7 +19,6 @@ class Config:
     range: dict
     password: str
     adminpassword: str
-    ssl: dict
     keepalive: int
 
     def __init__(self, config: dict):
@@ -31,7 +26,6 @@ class Config:
         self.range = config["range"]
         self.password = config["password"]
         self.adminpassword = config["adminpassword"]
-        self.ssl = config["ssl"]
         self.keepalive = config["keepalive"]
 
         if not self.password:

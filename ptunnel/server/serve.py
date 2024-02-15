@@ -8,7 +8,7 @@ from pathlib import Path
 from hashlib import sha256
 from flask import Flask, request
 from flask_cors import CORS
-
+from werkzeug.middleware.proxy_fix import ProxyFix
 from Crypto.PublicKey import RSA
 
 import ptunnel
@@ -19,6 +19,9 @@ CORS(app)
 session = {}
 domainmapper: dict[int, str] = {}
 kicklist: dict[str, list[int]] = {}
+
+# proxyfix
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1)
 
 nginxconfPath = Path("/etc/nginx/ptunnel/")
 NGINXCONF = """
@@ -309,6 +312,11 @@ def list():
     return {"session": session, "domainmap": domainmapper}, 200
 
 def run():
+    cert = Path(f"/etc/letsencrypt/live/{ptunnel.config.tunneldns}/")
+    if not cert.exists():
+        ptunnel.logger.error(f"SSL certificate not found: {cert}")
+        exit(1)
+        
     worker = threading.Thread(target=looper, daemon=True)
     worker.start()
     app.run(host="0.0.0.0", port=5000)

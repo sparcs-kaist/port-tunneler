@@ -141,6 +141,10 @@ def domainmap(args: list):
         logger.error("Invalid domain.")
         return
     
+    if not args[1] in sshworkers:
+        logger.error(f"Port {args[1]} is not open.")
+        return
+    
     if "domain" in sshworkers[args[1]]:
         logger.error(f"Domain {sshworkers[args[1]]['domain']} is already mapped.")
         return
@@ -177,6 +181,8 @@ def close(args: list):
 def help(args: list):
     logger.info("Available commands:")
     logger.info("  forward <port>: Open a port.")
+    logger.info("  domainmap <domain> <port>: Map a domain to a port.")
+    logger.info("     (e.g. domainmap example 30000 -> https://example.hackaton.sparcs.net/ -> localhost:30000)")
     logger.info("  close <port>: Close a port.")
     logger.info("  lists: List open ports.")
     logger.info("  exit: Exit the program.")

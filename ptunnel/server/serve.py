@@ -200,13 +200,7 @@ def close():
     if data["port"] not in session[data["session_id"]]["ports"]:
         return {"error": "Port not found."}, 404
 
-    if data["port"] in domainmapper:
-        domainPath = nginxconfPath / domainmapper[data["port"]]
-        domainPath.unlink(missing_ok=True)
-        domainmapper.pop(data["port"])
-    
-    session[data["session_id"]]["ports"].remove(data["port"])
-    ptunnel.logger.info(f"Port {data['port']} is released.")
+    release_port(data["port"], data["session_id"])
 
     return {"status": "ok"}, 200
 
@@ -220,12 +214,7 @@ def closeall():
         return {"error": "Unauthorized."}, 401
     
     for port in session[data["session_id"]]["ports"]:
-        if port in domainmapper:
-            domainPath = nginxconfPath / domainmapper[port]
-            domainPath.unlink(missing_ok=True)
-            domainmapper.pop(port)
-        session[data["session_id"]]["ports"].remove(port)
-        ptunnel.logger.info(f"Port {port} is released.")
+        release_port(port, data["session_id"])
 
     return {"status": "ok"}, 200
 
@@ -281,7 +270,7 @@ def domainmap():
     if nginxtry != 0:
         srvdomainconfPath.unlink()
         ptunnel.logger.error(nginxconf)
-        return {"error": "Error, contact admin."}, 400
+        return {"error": "International server error. Contact admin."}, 500
     
     os.system("systemctl reload nginx")
     domainmapper.update({data["port"]: srvdomain})

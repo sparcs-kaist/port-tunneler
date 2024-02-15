@@ -26,12 +26,12 @@ app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1)
 nginxconfPath = Path("/etc/nginx/ptunnel/")
 NGINXCONF = """
 server {
-    server_name {srvdomain};
+    server_name __srvdomain__;
     
     include /etc/nginx/default.d/*.conf;
 
     location / {
-        proxy_pass http://localhost:{port}/;
+        proxy_pass http://localhost:__port__/;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "Upgrade";
@@ -39,17 +39,17 @@ server {
     }
 
     listen 443 ssl;
-    ssl_certificate /etc/letsencrypt/live/{tunneldns}/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/{tunneldns}/privkey.pem;
+    ssl_certificate /etc/letsencrypt/live/__tunneldns__/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/__tunneldns__/privkey.pem;
     include /etc/letsencrypt/options-ssl-nginx.conf;
     ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem; 
 }
 server {
-    if ($host = {srvdomain}) {
+    if ($host = __srvdomain__) {
         return 301 https://$host$request_uri;
     } # managed by Certbot
 
-    server_name {srvdomain}
+    server_name __srvdomain__
 
     listen 80;
     return 404; # managed by Certbot
@@ -274,7 +274,7 @@ def domainmap():
     if srvdomainconfPath.exists():
         return {"error": "Domain already exists."}, 400
     
-    nginxconf = NGINXCONF.format(srvdomain=srvdomain, port=data["port"], tunneldns=ptunnel.config.tunneldns)
+    nginxconf = NGINXCONF.replace("__srvdomain__", srvdomain).replace("__port__", str(data["port"])).replace("__tunneldns__", ptunnel.config.tunneldns)
     srvdomainconfPath.write_text(nginxconf)
     nginxtry = os.system(f"nginx -t")
     if nginxtry != 0:

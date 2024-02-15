@@ -5,7 +5,7 @@ import ptunnel
 import ptunnel.client
 import ptunnel.server
 
-__version__ = "1.1.0-pre11"
+__version__ = "1.1.0"
 ptunnel.__version__ = __version__
 
 @click.version_option(prog_name="ptunnel", version=__version__)

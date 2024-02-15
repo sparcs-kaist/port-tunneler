@@ -212,7 +212,7 @@ def run():
             continue
 
         try:
-            response = requests.post(f"https://{SRV_URL}/auth", json={"id": team_id, "password": password}, timeout=timeout)
+            response = requests.post(f"https://{SRV_URL}/auth", json={"id": team_id, "password": password}, timeout=5)
             if response.status_code != 200:
                 logger.error(f"Error: {response.json()['error']}")
                 continue

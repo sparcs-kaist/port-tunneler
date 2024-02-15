@@ -10,7 +10,6 @@ keepalive_thread = None
 team_id = None
 SRV_URL = "htunnel.sparcs.net"
 sessid = None
-timeout = 5
 logger = ptunnel.logger
 sshworkers = {}
 
@@ -20,7 +19,7 @@ def _kill_port(port: int):
         del sshworkers[port]
     return
 
-def _request(url, json, keepalive=False):
+def _request(url, json, keepalive=False, timeout=5):
     global sessid
 
     if not sessid:
@@ -64,7 +63,7 @@ def _setup():
         sshPath.mkdir(exist_ok=True)
         sshPath.chmod(0o700)
     if not sshidPath.exists():
-        rtn = _request("make_key", {})
+        rtn = _request("make_key", {}, timeout=15)
         if not rtn:
             return False
         sshidPath.write_text(rtn["private_key"])

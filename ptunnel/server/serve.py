@@ -264,6 +264,8 @@ def domainmap():
     if data["session_id"] not in session:
         return {"error": "Unauthorized."}, 401
     if data["port"] not in session[data["session_id"]]["ports"]:
+        print(session[data["session_id"]]["ports"])
+        print(data["port"])
         return {"error": "Port not found."}, 404
     
     srvdomain = f"{data['domain']}.{ptunnel.config.tunneldns}"

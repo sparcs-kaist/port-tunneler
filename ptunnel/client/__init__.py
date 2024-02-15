@@ -137,25 +137,27 @@ def domainmap(args: list):
         return
     
     domain = args[0]
+    port = args[1]
     if "." in domain:
         logger.error("Invalid domain.")
         return
-    
-    if not args[1] in sshworkers:
-        logger.error(f"Port {args[1]} is not open.")
+
+    if not port in sshworkers:
+        logger.error(f"Port {port} is not open.")
         return
     
-    if "domain" in sshworkers[args[1]]:
-        logger.error(f"Domain {sshworkers[args[1]]['domain']} is already mapped.")
+    if "domain" in sshworkers[port]:
+        logger.error(f"Domain {sshworkers[port]['domain']} is already mapped.")
         return
     
-    rtn = _request("domainmap", {"domain": domain, "port": sshworkers[args[1]]["remoteport"]})
+    rtn = _request("domainmap", {"domain": domain, "port": sshworkers[port]["remoteport"]})
     if not rtn:
         return
-    
-    sshworkers[args[1]]["domain"] = rtn["domain"]
+    domain = rtn["domain"]
 
-    logger.info(f"Domain https://{rtn["domain"]}/ is now mapped to port localhost:{args[1]}.")
+    sshworkers[port]["domain"] = domain
+
+    logger.info(f"Domain https://{domain}/ is now mapped to port localhost:{port}.")
     return
 
 def close(args: list):
